@@ -20,8 +20,9 @@ public class Session implements Serializable {
     private String date;
 
     public Session() {
-
+    this.user = "Guy"; // Default for demo use
     }
+
 
     public int getId() {
         return id;
