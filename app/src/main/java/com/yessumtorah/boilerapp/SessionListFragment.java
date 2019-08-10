@@ -6,13 +6,14 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.yessumtorah.boilerapp.dummy.DummyContent;
 import com.yessumtorah.boilerapp.dummy.DummyContent.DummyItem;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,25 +22,28 @@ import java.util.List;
  * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
  * interface.
  */
-public class ItemFragment extends Fragment {
+public class SessionListFragment extends Fragment {
 
     // TODO: Customize parameter argument names
     private static final String ARG_COLUMN_COUNT = "column-count";
     // TODO: Customize parameters
     private int mColumnCount = 1;
     private OnListFragmentInteractionListener mListener;
+    private static final String TAG = "SessionListFragment";
+    private List<Session> retrievedSessions = new ArrayList<Session>();
+    public MainActivity mainAct;
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
      */
-    public ItemFragment() {
+    public SessionListFragment() {
     }
 
     // TODO: Customize parameter initialization
     @SuppressWarnings("unused")
-    public static ItemFragment newInstance(int columnCount) {
-        ItemFragment fragment = new ItemFragment();
+    public static SessionListFragment newInstance(int columnCount) {
+        SessionListFragment fragment = new SessionListFragment();
         Bundle args = new Bundle();
         args.putInt(ARG_COLUMN_COUNT, columnCount);
         fragment.setArguments(args);
@@ -53,12 +57,15 @@ public class ItemFragment extends Fragment {
         if (getArguments() != null) {
             mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
         }
+       // mSessions = getActivity().getClass().getAll
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_item_list, container, false);
+        mainAct = (MainActivity) getActivity();
+
 
         // Set the adapter
         if (view instanceof RecyclerView) {
@@ -69,7 +76,22 @@ public class ItemFragment extends Fragment {
             } else {
                 recyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             }
-            recyclerView.setAdapter(new MyItemRecyclerViewAdapter(DummyContent.ITEMS, mListener));
+
+            Thread t = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    retrievedSessions = mainAct.db.daoAccess().listSessions();
+                }
+            });
+            t.start();
+
+            try {
+                t.join();
+            } catch (InterruptedException e) { e.printStackTrace(); }
+
+            Log.d(TAG, "retrieved " + retrievedSessions.size() + " session records");
+            recyclerView.setAdapter(new MyItemRecyclerViewAdapter(retrievedSessions, mListener));
         }
         return view;
     }

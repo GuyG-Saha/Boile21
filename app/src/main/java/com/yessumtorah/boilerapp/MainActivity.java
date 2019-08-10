@@ -3,7 +3,6 @@ package com.yessumtorah.boilerapp;
 import android.arch.persistence.room.Room;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.health.TimerStat;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
@@ -20,10 +19,10 @@ import com.yessumtorah.boilerapp.dummy.DummyContent;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Timer;
+import java.util.List;
 import java.util.TimerTask;
 
-public class MainActivity extends AppCompatActivity implements ItemFragment.OnListFragmentInteractionListener {
+public class MainActivity extends AppCompatActivity implements SessionListFragment.OnListFragmentInteractionListener {
     private static final String TAG = "MainActivity";
     private static final String boilerID = "Demo3217"; // For Demo use
     private TextView mTextMessage;
@@ -34,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements ItemFragment.OnLi
     private boolean boilerOn, firstSession;
     private final Handler timer = new Handler();
     private int total = 0;
+    public boolean bool;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -47,8 +47,8 @@ public class MainActivity extends AppCompatActivity implements ItemFragment.OnLi
                 case R.id.navigation_dashboard:
                     android.support.v4.app.FragmentManager fragmentManager = getSupportFragmentManager();
                     android.support.v4.app.FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                 //   FragmentOne f1 = new FragmentOne();
-                    ItemFragment fragment = new ItemFragment();
+                    //   FragmentOne f1 = new FragmentOne();
+                    SessionListFragment fragment = new SessionListFragment();
                     fragmentTransaction.add(R.id.container, fragment);
                     fragmentTransaction.addToBackStack(null);
                     fragmentTransaction.commit();
@@ -118,20 +118,24 @@ public class MainActivity extends AppCompatActivity implements ItemFragment.OnLi
                 theBoiler.setOn(true);
                 firstSession = false;
             }
-            timer.postDelayed(runnable, 1000);
+            timer.postDelayed(runnable, Session.SECOND);
         } else {
             boilerOn = false;
             theBoiler.setOn(false);
             timer.removeCallbacksAndMessages(runnable);
-            mSession.setTotalTime(total);
+            mSession.setTotalTime(total / Session.SECOND);
             mSession.setDate(new Date().toString());
-            Log.d(TAG, "Total time for this session: " + total);
+            Log.d(TAG, "Total time for this session: " + mSession.getTotalTime() + " at date " + mSession.getDate());
 
             // Save current session in local DB
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     db.daoAccess().insertSession(mSession);
+                    List<Session> retrievedSessions = db.daoAccess().listSessions();
+                    for (Session s : retrievedSessions) {
+                        Log.d(TAG, s.toString());
+                    }
                 }
             });
             t.start();
@@ -139,6 +143,10 @@ public class MainActivity extends AppCompatActivity implements ItemFragment.OnLi
             allSessions.add(mSession);
             Log.d(TAG, "Session " + mSession + " with total time of " + mSession.getTotalTime()/1000 + "s added to allSessions " + allSessions.size());
         }
+    }
+
+    public ArrayList<Session> getAllSessions() {
+        return allSessions;
     }
 
     @Override
