@@ -1,8 +1,7 @@
 package com.yessumtorah.boilerapp;
 
 import java.io.Serializable;
-import java.util.Date;
-import java.util.Timer;
+import java.sql.Time;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
@@ -18,6 +17,7 @@ public class Session implements Serializable {
     private int totalTime;
     @ColumnInfo(name = "started_at")
     private String date;
+
 
     private static final int DATE_PARSE_INDEX = 19;
     public static final int SECOND = 1000;

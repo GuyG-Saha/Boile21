@@ -12,18 +12,26 @@
     tools:context=".MainActivity">
 
 
-   <Button
+    <Button
        android:id="@+id/custom_button"
        android:layout_width="wrap_content"
        android:layout_height="wrap_content"
        android:background="@drawable/custom_button"
        />
 
+    <Chronometer
+        android:id="@+id/boilerChronometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#feff0e"
+        android:textSize="25sp" />
+
     <Switch
         android:id="@+id/enable"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Enabled"
+        android:textColor="#8FB110"
         android:checked="true"/>
 
     <RelativeLayout

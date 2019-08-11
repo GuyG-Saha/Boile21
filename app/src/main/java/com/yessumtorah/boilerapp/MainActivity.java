@@ -3,6 +3,7 @@ package com.yessumtorah.boilerapp;
 import android.arch.persistence.room.Room;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
@@ -10,6 +11,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Chronometer;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimerTask;
+import java.sql.Time;
 
 public class MainActivity extends AppCompatActivity implements SessionListFragment.OnListFragmentInteractionListener {
     private static final String TAG = "MainActivity";
@@ -32,8 +35,9 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
     SessionDatabase db;
     private boolean boilerOn, firstSession;
     private final Handler timer = new Handler();
-    private int total = 0;
-    public boolean bool;
+    private Chronometer boilerChronometer;
+    private Time total = new Time(0, 0, 0);
+
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -42,9 +46,10 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
                 case R.id.navigation_home:
-
+                    boilerChronometer.setVisibility(View.VISIBLE);
                     return true;
                 case R.id.navigation_dashboard:
+                    boilerChronometer.setVisibility(View.GONE);
                     android.support.v4.app.FragmentManager fragmentManager = getSupportFragmentManager();
                     android.support.v4.app.FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
                     //   FragmentOne f1 = new FragmentOne();
@@ -67,7 +72,8 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         setContentView(R.layout.activity_main);
         final Button customButton = findViewById(R.id.custom_button);
         Switch switchEnable = findViewById(R.id.enable);
-
+        boilerChronometer = (Chronometer) findViewById(R.id.boilerChronometer); // initiate a chronometer
+        boilerChronometer.setVisibility(View.VISIBLE);
         customButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -98,21 +104,24 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
 
     public void boilerButtonHandler(View v) {
         Log.d(TAG, "boilerButton clicked");
+        boilerChronometer.setBase(SystemClock.elapsedRealtime() - 0);
         Runnable runnable = new Runnable() {
             private int time = 0;
             @Override
             public void run() {
                 if (boilerOn) {
                     time += 1000;
+                    boilerChronometer.start();
+                    mSession = new Session();
                     Log.d("TimerExample", "Going for... " + time);
                     timer.postDelayed(this, 1000);
-                    total = time;
+                    total.setTime(time);
                 }
             }
         };
         if (!boilerOn) {
             boilerOn = true;
-            mSession = new Session();
+
             if (firstSession) {
                 theBoiler = Boiler.getInstance(boilerID);
                 theBoiler.setOn(true);
@@ -121,9 +130,11 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
             timer.postDelayed(runnable, Session.SECOND);
         } else {
             boilerOn = false;
+            boilerChronometer.stop();
+            boilerChronometer.setText("00:00");
             theBoiler.setOn(false);
             timer.removeCallbacksAndMessages(runnable);
-            mSession.setTotalTime(total / Session.SECOND);
+            mSession.setTotalTime((int)total.getTime()/Session.SECOND);
             mSession.setDate(new Date().toString());
             Log.d(TAG, "Total time for this session: " + mSession.getTotalTime() + " at date " + mSession.getDate());
 
@@ -141,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
             t.start();
 
             allSessions.add(mSession);
-            Log.d(TAG, "Session " + mSession + " with total time of " + mSession.getTotalTime()/1000 + "s added to allSessions " + allSessions.size());
+            Log.d(TAG, "Session " + mSession + " with total time of " + mSession.getTotalTime()/Session.SECOND + " added to allSessions " + allSessions.size());
         }
     }
 
