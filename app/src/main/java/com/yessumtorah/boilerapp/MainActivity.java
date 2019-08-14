@@ -52,19 +52,25 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
                     boilerChronometer.setVisibility(View.GONE);
                     android.support.v4.app.FragmentManager fragmentManager = getSupportFragmentManager();
                     android.support.v4.app.FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                    //   FragmentOne f1 = new FragmentOne();
                     SessionListFragment fragment = new SessionListFragment();
                     fragmentTransaction.add(R.id.container, fragment);
                     fragmentTransaction.addToBackStack(null);
                     fragmentTransaction.commit();
                     return true;
                 case R.id.navigation_notifications:
-
+                    //dropSessionsTable();
                     return true;
             }
             return false;
         }
     };
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putString("boilerChrono", boilerChronometer.getText().toString());
+        outState.putBoolean("boilerState", boilerOn);
+        super.onSaveInstanceState(outState);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,10 +80,17 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         Switch switchEnable = findViewById(R.id.enable);
         boilerChronometer = (Chronometer) findViewById(R.id.boilerChronometer); // initiate a chronometer
         boilerChronometer.setVisibility(View.VISIBLE);
+        if (savedInstanceState != null) {
+            String timecode = savedInstanceState.getString("boilerChrono");
+            boilerChronometer.setText(timecode);
+        }
         customButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Boiler Button Clicked", Toast.LENGTH_SHORT).show();
+                if (!boilerOn)
+                    Toast.makeText(MainActivity.this, "Boiler Turned ON", Toast.LENGTH_SHORT).show();
+                else
+                    Toast.makeText(MainActivity.this, "Boiler Turned OFF", Toast.LENGTH_SHORT).show();
                 boilerButtonHandler(v);
             }
         });
@@ -124,7 +137,6 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
 
             if (firstSession) {
                 theBoiler = Boiler.getInstance(boilerID);
-                theBoiler.setOn(true);
                 firstSession = false;
             }
             timer.postDelayed(runnable, Session.SECOND);
@@ -132,7 +144,6 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
             boilerOn = false;
             boilerChronometer.stop();
             boilerChronometer.setText("00:00");
-            theBoiler.setOn(false);
             timer.removeCallbacksAndMessages(runnable);
             mSession.setTotalTime((int)total.getTime()/Session.SECOND);
             mSession.setDate(new Date().toString());
@@ -165,21 +176,15 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         Log.d(TAG, "onListFragmentInteraction callback");
     }
 
-    private class boilerTask extends TimerTask {
-    private Date date;
-
-        public boilerTask(Date date) {
-           this.date = date;
-        }
-
-        @Override
-        public void run() {
-            mSession = new Session();
-            mSession.setDate(date.toString());
-            mSession.setUser("Primary User");
-            theBoiler.setOn(true);
-        }
-
+    private void dropSessionsTable() {
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                db.daoAccess().deleteAll();
+                Log.d(TAG, "Sessions table dropped");
+            }
+        });
+        t.start();
     }
 
 }

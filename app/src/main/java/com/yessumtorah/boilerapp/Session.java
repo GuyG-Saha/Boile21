@@ -18,9 +18,9 @@ public class Session implements Serializable {
     @ColumnInfo(name = "started_at")
     private String date;
 
-
     private static final int DATE_PARSE_INDEX = 19;
     public static final int SECOND = 1000;
+    public static final int MINUTE = 60;
 
     public Session() {
     this.user = "Guy"; // Default for demo use
@@ -57,11 +57,15 @@ public class Session implements Serializable {
         this.date = date;
     }
 
+    private Time convertToDisplayTime(int totalTime) {
+        return new Time(totalTime / (MINUTE * MINUTE), (totalTime/MINUTE) % MINUTE, totalTime%MINUTE);
+    }
+
     public String toString() {
         try {
-            return date.substring(0, DATE_PARSE_INDEX) + ", " + totalTime + "s, " + user;
+            return date.substring(0, DATE_PARSE_INDEX) + ", " + convertToDisplayTime(totalTime) + ", " + user;
         } catch (NullPointerException e) { // Handles first records saved with null date
-            return date + ", " + totalTime/SECOND + "s, " + user;
+            return date + ", " + convertToDisplayTime(totalTime) + ", " + user;
         }
     }
 
