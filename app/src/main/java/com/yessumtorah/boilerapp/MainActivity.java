@@ -1,6 +1,7 @@
 package com.yessumtorah.boilerapp;
 
 import android.arch.persistence.room.Room;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -28,6 +29,9 @@ import java.sql.Time;
 public class MainActivity extends AppCompatActivity implements SessionListFragment.OnListFragmentInteractionListener {
     private static final String TAG = "MainActivity";
     private static final String boilerID = "Demo3217"; // For Demo use
+    private static final String PREFERENCES = "prefs";
+    private static final String BOILER_ON = "boilerOn";
+    private static final String TIME_PASSED = "secondsPassed";
     private TextView mTextMessage;
     private Boiler theBoiler;
     private Session mSession;
@@ -69,7 +73,9 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
     public void onSaveInstanceState(Bundle outState) {
         outState.putString("boilerChrono", boilerChronometer.getText().toString());
         outState.putBoolean("boilerState", boilerOn);
+        outState.putInt("timerSeconds", total.getSeconds());
         super.onSaveInstanceState(outState);
+        Log.i("onSaveInstanceState", "boilerOn is " + boilerOn + "\nboilerChronometer text is " + boilerChronometer.getText().toString());
     }
 
     @Override
@@ -80,10 +86,15 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         Switch switchEnable = findViewById(R.id.enable);
         boilerChronometer = (Chronometer) findViewById(R.id.boilerChronometer); // initiate a chronometer
         boilerChronometer.setVisibility(View.VISIBLE);
-        if (savedInstanceState != null) {
+        /*if (savedInstanceState != null) {
+            boilerOn = savedInstanceState.getBoolean("boilerState");
             String timecode = savedInstanceState.getString("boilerChrono");
             boilerChronometer.setText(timecode);
-        }
+            total.setTime(savedInstanceState.getInt("timerSeconds"));
+           boilerChronometer.setBase(SystemClock.elapsedRealtime() - total.getTime());
+            boilerChronometer.start();
+            Log.i(TAG, "Activity reCreated, boilerOn is " + boilerOn);
+        }*/
         customButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -119,16 +130,22 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         Log.d(TAG, "boilerButton clicked");
         boilerChronometer.setBase(SystemClock.elapsedRealtime() - 0);
         Runnable runnable = new Runnable() {
-            private int time = 0;
+            private int tick = 0;
             @Override
             public void run() {
                 if (boilerOn) {
-                    time += 1000;
-                    boilerChronometer.start();
                     mSession = new Session();
-                    Log.d("TimerExample", "Going for... " + time);
-                    timer.postDelayed(this, 1000);
-                    total.setTime(time);
+                    mSession.setDate(new Date().toString());
+                    boilerChronometer.start();
+                    boilerChronometer.setOnChronometerTickListener(new Chronometer.OnChronometerTickListener() {
+
+                        @Override
+                        public void onChronometerTick(Chronometer chronometer) {
+                            Log.d("ChronoTickListenerDebug", boilerChronometer.getContentDescription().toString());
+                            tick += Session.SECOND;
+                            total.setTime(tick);
+                        }
+                    });
                 }
             }
         };
@@ -139,14 +156,13 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
                 theBoiler = Boiler.getInstance(boilerID);
                 firstSession = false;
             }
-            timer.postDelayed(runnable, Session.SECOND);
+            timer.postDelayed(runnable, Session.SECOND); // DON'T REMOVE
         } else {
             boilerOn = false;
             boilerChronometer.stop();
             boilerChronometer.setText("00:00");
-            timer.removeCallbacksAndMessages(runnable);
+            timer.removeCallbacksAndMessages(runnable); // DON'T REMOVE
             mSession.setTotalTime((int)total.getTime()/Session.SECOND);
-            mSession.setDate(new Date().toString());
             Log.d(TAG, "Total time for this session: " + mSession.getTotalTime() + " at date " + mSession.getDate());
 
             // Save current session in local DB
