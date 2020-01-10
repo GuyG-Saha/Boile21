@@ -2,6 +2,9 @@ package com.yessumtorah.boilerapp;
 
 import java.io.Serializable;
 import java.sql.Time;
+import java.time.Duration;
+import java.time.Instant;
+
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
@@ -17,6 +20,8 @@ public class Session implements Serializable {
     private int totalTime;
     @ColumnInfo(name = "started_at")
     private String date;
+
+   // private localTime startTime;
 
     private static final int DATE_PARSE_INDEX = 19;
     public static final int SECOND = 1000;
@@ -57,6 +62,7 @@ public class Session implements Serializable {
         this.date = date;
     }
 
+    /** This method is to be used by toString(). Consider switching totalTime to Time object **/
     private Time convertToDisplayTime(int totalTime) {
         return new Time(totalTime / (MINUTE * MINUTE), (totalTime/MINUTE) % MINUTE, totalTime%MINUTE);
     }

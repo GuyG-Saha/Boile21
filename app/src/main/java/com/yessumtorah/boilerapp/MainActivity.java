@@ -1,7 +1,6 @@
 package com.yessumtorah.boilerapp;
 
 import android.arch.persistence.room.Room;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -17,13 +16,15 @@ import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.time.Instant;
+import java.time.Duration;
+
+
 
 import com.yessumtorah.boilerapp.dummy.DummyContent;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-import java.util.TimerTask;
 import java.sql.Time;
 
 public class MainActivity extends AppCompatActivity implements SessionListFragment.OnListFragmentInteractionListener {
@@ -40,7 +41,8 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
     private boolean boilerOn, firstSession;
     private final Handler timer = new Handler();
     private Chronometer boilerChronometer;
-    private Time total = new Time(0, 0, 0);
+    private long startTime;
+    private Time totalTime = new Time(0, 0, 0);
 
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -62,6 +64,12 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
                     fragmentTransaction.commit();
                     return true;
                 case R.id.navigation_notifications:
+                    Toast.makeText(MainActivity.this, "Clearing Database records...", Toast.LENGTH_SHORT).show();
+                    try {
+                        Thread.currentThread().sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     //dropSessionsTable();
                     return true;
             }
@@ -73,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
     public void onSaveInstanceState(Bundle outState) {
         outState.putString("boilerChrono", boilerChronometer.getText().toString());
         outState.putBoolean("boilerState", boilerOn);
-        outState.putInt("timerSeconds", total.getSeconds());
+        outState.putInt("timerSeconds", totalTime.getSeconds());
         super.onSaveInstanceState(outState);
         Log.i("onSaveInstanceState", "boilerOn is " + boilerOn + "\nboilerChronometer text is " + boilerChronometer.getText().toString());
     }
@@ -90,8 +98,8 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
             boilerOn = savedInstanceState.getBoolean("boilerState");
             String timecode = savedInstanceState.getString("boilerChrono");
             boilerChronometer.setText(timecode);
-            total.setTime(savedInstanceState.getInt("timerSeconds"));
-           boilerChronometer.setBase(SystemClock.elapsedRealtime() - total.getTime());
+            totalTime.setTime(savedInstanceState.getInt("timerSeconds"));
+           boilerChronometer.setBase(SystemClock.elapsedRealtime() - totalTime.getTime());
             boilerChronometer.start();
             Log.i(TAG, "Activity reCreated, boilerOn is " + boilerOn);
         }*/
@@ -134,6 +142,7 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
             @Override
             public void run() {
                 if (boilerOn) {
+                    startTime = System.currentTimeMillis();
                     mSession = new Session();
                     mSession.setDate(new Date().toString());
                     boilerChronometer.start();
@@ -143,7 +152,8 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
                         public void onChronometerTick(Chronometer chronometer) {
                             Log.d("ChronoTickListenerDebug", boilerChronometer.getContentDescription().toString());
                             tick += Session.SECOND;
-                            total.setTime(tick);
+                            //totalTime.setTime(tick);
+                            //Log.d("tickVariableDebug", String.valueOf(tick));
                         }
                     });
                 }
@@ -151,18 +161,18 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
         };
         if (!boilerOn) {
             boilerOn = true;
-
             if (firstSession) {
                 theBoiler = Boiler.getInstance(boilerID);
                 firstSession = false;
             }
             timer.postDelayed(runnable, Session.SECOND); // DON'T REMOVE
         } else {
+            long endTime = System.currentTimeMillis();
             boilerOn = false;
             boilerChronometer.stop();
             boilerChronometer.setText("00:00");
             timer.removeCallbacksAndMessages(runnable); // DON'T REMOVE
-            mSession.setTotalTime((int)total.getTime()/Session.SECOND);
+            mSession.setTotalTime((int)(endTime - startTime) / Session.SECOND);
             Log.d(TAG, "Total time for this session: " + mSession.getTotalTime() + " at date " + mSession.getDate());
 
             // Save current session in local DB
@@ -170,16 +180,10 @@ public class MainActivity extends AppCompatActivity implements SessionListFragme
                 @Override
                 public void run() {
                     db.daoAccess().insertSession(mSession);
-                    List<Session> retrievedSessions = db.daoAccess().listSessions();
-                    for (Session s : retrievedSessions) {
-                        Log.d(TAG, s.toString());
-                    }
                 }
             });
             t.start();
-
             allSessions.add(mSession);
-            Log.d(TAG, "Session " + mSession + " with total time of " + mSession.getTotalTime()/Session.SECOND + " added to allSessions " + allSessions.size());
         }
     }
 
